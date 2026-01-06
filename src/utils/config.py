@@ -20,30 +20,44 @@ def load_config() -> Dict[str, Any]:
     for config_path in config_paths:
         config_file = Path(config_path)
         if config_file.exists():
-            with open(config_file, "rb") as f:
-                config = tomli.load(f)
-                # Set base_dir if not set
-                if 'paths' not in config:
-                    config['paths'] = {}
-                if 'base_dir' not in config['paths']:
-                    # Use /opt/autobuilder for production, project root for dev
-                    if str(config_file).startswith('/etc'):
-                        config['paths']['base_dir'] = "/opt/autobuilder"
-                    else:
-                        config['paths']['base_dir'] = str(project_root)
-                
-                # Set other paths if not set
-                base_dir = config['paths']['base_dir']
-                if 'reports_dir' not in config['paths']:
-                    config['paths']['reports_dir'] = os.path.join(base_dir, 'reports')
-                if 'workspaces_dir' not in config['paths']:
-                    config['paths']['workspaces_dir'] = os.path.join(base_dir, 'workspaces')
-                if 'logs_dir' not in config['paths']:
-                    config['paths']['logs_dir'] = '/var/log/autobuilder'
-                
-                return config
+            try:
+                with open(config_file, "rb") as f:
+                    config = tomli.load(f)
+                    
+                    # Validate config structure
+                    if not isinstance(config, dict):
+                        raise ValueError(f"Config file {config_path} is not a valid TOML dictionary")
+                    
+                    # Set default telegram section if missing
+                    if 'telegram' not in config:
+                        config['telegram'] = {}
+                    
+                    # Set base_dir if not set
+                    if 'paths' not in config:
+                        config['paths'] = {}
+                    if 'base_dir' not in config['paths']:
+                        # Use /opt/autobuilder for production, project root for dev
+                        if str(config_file).startswith('/etc'):
+                            config['paths']['base_dir'] = "/opt/autobuilder"
+                        else:
+                            config['paths']['base_dir'] = str(project_root)
+                    
+                    # Set other paths if not set
+                    base_dir = config['paths']['base_dir']
+                    if 'reports_dir' not in config['paths']:
+                        config['paths']['reports_dir'] = os.path.join(base_dir, 'reports')
+                    if 'workspaces_dir' not in config['paths']:
+                        config['paths']['workspaces_dir'] = os.path.join(base_dir, 'workspaces')
+                    if 'logs_dir' not in config['paths']:
+                        config['paths']['logs_dir'] = '/var/log/autobuilder'
+                    
+                    return config
+            except Exception as e:
+                raise ValueError(f"Failed to parse config file {config_path}: {e}")
     
     raise FileNotFoundError(
-        f"Configuration file not found. Tried: {', '.join(str(p) for p in config_paths)}"
+        f"Configuration file not found. Tried: {', '.join(str(p) for p in config_paths)}\n"
+        f"Please create config file: sudo cp /opt/autobuilder/config/config.example.toml /etc/autobuilder/config.toml\n"
+        f"Then edit it: sudo nano /etc/autobuilder/config.toml"
     )
 

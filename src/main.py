@@ -117,9 +117,13 @@ def main():
     signal.signal(signal.SIGTERM, signal_handler)
     
     # Create application
-    bot_token = config['telegram']['bot_token']
+    telegram_config = config.get('telegram', {})
+    bot_token = telegram_config.get('bot_token', '')
+    
     if not bot_token or bot_token == "YOUR_BOT_TOKEN_HERE":
         logger.error("Bot token not configured! Please set telegram.bot_token in config.toml")
+        logger.error("Config file location: /etc/autobuilder/config.toml")
+        logger.error("Example: sudo nano /etc/autobuilder/config.toml")
         sys.exit(1)
     
     application = Application.builder().token(bot_token).post_init(post_init).post_shutdown(post_shutdown).build()
