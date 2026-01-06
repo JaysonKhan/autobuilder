@@ -26,6 +26,7 @@ from src.telegram.handlers import (
     handle_status,
     handle_audit_site,
     handle_build_weather_apk,
+    handle_ddos,
     handle_jobs,
     handle_job,
     handle_cancel,
