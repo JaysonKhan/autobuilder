@@ -208,19 +208,52 @@ fi
 if [ "$MODE" = "full" ] || [ "$MODE" = "deps" ]; then
     print_header "📋 Copying Project Files"
     
-    cp -r "$PROJECT_DIR/src" "$INSTALL_DIR/" 2>/dev/null || {
-        print_error "Failed to copy src directory"
-        exit 1
-    }
-    cp -r "$PROJECT_DIR/config" "$INSTALL_DIR/" 2>/dev/null || {
-        print_error "Failed to copy config directory"
-        exit 1
-    }
-    cp "$PROJECT_DIR/requirements.txt" "$INSTALL_DIR/" 2>/dev/null || {
-        print_warning "requirements.txt not found, will create"
-    }
-    
-    print_success "Files copied"
+    # Check if we're already in the install directory
+    if [ "$PROJECT_DIR" = "$INSTALL_DIR" ]; then
+        print_info "Already in installation directory, skipping file copy"
+    else
+        # Remove old files if they exist
+        if [ -d "$INSTALL_DIR/src" ]; then
+            if ask_yes_no "Remove existing src directory?" "y"; then
+                rm -rf "$INSTALL_DIR/src"
+            fi
+        fi
+        if [ -d "$INSTALL_DIR/config" ]; then
+            if ask_yes_no "Remove existing config directory?" "y"; then
+                rm -rf "$INSTALL_DIR/config"
+            fi
+        fi
+        
+        # Copy files
+        if [ -d "$PROJECT_DIR/src" ]; then
+            cp -r "$PROJECT_DIR/src" "$INSTALL_DIR/" || {
+                print_error "Failed to copy src directory"
+                exit 1
+            }
+        else
+            print_error "Source directory not found at $PROJECT_DIR/src"
+            exit 1
+        fi
+        
+        if [ -d "$PROJECT_DIR/config" ]; then
+            cp -r "$PROJECT_DIR/config" "$INSTALL_DIR/" || {
+                print_error "Failed to copy config directory"
+                exit 1
+            }
+        else
+            print_warning "Config directory not found, will use existing or create"
+        fi
+        
+        if [ -f "$PROJECT_DIR/requirements.txt" ]; then
+            cp "$PROJECT_DIR/requirements.txt" "$INSTALL_DIR/" || {
+                print_warning "Failed to copy requirements.txt"
+            }
+        else
+            print_warning "requirements.txt not found, will create"
+        fi
+        
+        print_success "Files copied"
+    fi
 fi
 
 # Set permissions
