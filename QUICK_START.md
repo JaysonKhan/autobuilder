@@ -15,8 +15,15 @@ cd autobuilder-source/autobuilder
 ### 2. O'rnatish
 
 ```bash
-sudo bash scripts/install.sh
+sudo bash install.sh
 ```
+
+Interaktiv menu sizga quyidagi variantlarni taklif qiladi:
+- **1. Full installation** - to'liq o'rnatish (tavsiya etiladi)
+- **2. Install dependencies only** - faqat dependencies
+- **3. Setup service only** - faqat service
+- **4. Fix/Repair installation** - o'rnatishni tuzatish
+- **5. Uninstall** - o'chirish
 
 Bu script:
 - ✅ Barcha kerakli paketlarni o'rnatadi

@@ -33,8 +33,15 @@ autobuilder/
 
 ```bash
 cd autobuilder
-sudo bash scripts/install.sh
+sudo bash install.sh
 ```
+
+Bu interaktiv script sizga quyidagi variantlarni taklif qiladi:
+- **1. Full installation** (tavsiya etiladi) - to'liq o'rnatish
+- **2. Install dependencies only** - faqat dependencies
+- **3. Setup service only** - faqat service
+- **4. Fix/Repair installation** - o'rnatishni tuzatish
+- **5. Uninstall** - o'chirish
 
 ### 2. Configuration
 
