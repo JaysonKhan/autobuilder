@@ -10,13 +10,15 @@ import signal
 import sys
 from pathlib import Path
 
-# Add project root to Python path
-PROJECT_ROOT = Path(__file__).parent.parent
-sys.path.insert(0, str(PROJECT_ROOT))
-
+# Import telegram bot library FIRST (before adding src to path to avoid module conflict)
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 
+# Add project root to Python path AFTER importing telegram library
+PROJECT_ROOT = Path(__file__).parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
+
+# Now import our modules (using full path)
 from src.jobs.job_manager import JobManager
 from src.telegram.handlers import (
     handle_start,
