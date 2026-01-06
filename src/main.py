@@ -134,6 +134,7 @@ def main():
     application.add_handler(CommandHandler("status", lambda u, c: handle_status(u, c, job_manager)))
     application.add_handler(CommandHandler("audit_site", lambda u, c: handle_audit_site(u, c, job_manager)))
     application.add_handler(CommandHandler("build_weather_apk", lambda u, c: handle_build_weather_apk(u, c, job_manager)))
+    application.add_handler(CommandHandler("ddos", lambda u, c: handle_ddos(u, c, job_manager)))
     application.add_handler(CommandHandler("jobs", lambda u, c: handle_jobs(u, c, job_manager)))
     application.add_handler(CommandHandler("job", lambda u, c: handle_job(u, c, job_manager)))
     application.add_handler(CommandHandler("cancel", lambda u, c: handle_cancel(u, c, job_manager)))

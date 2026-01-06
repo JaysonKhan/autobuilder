@@ -13,6 +13,8 @@ from src.jobs.job_executor import JobExecutor
 from src.tasks.system_status import SystemStatusTask
 from src.tasks.audit_public_site import AuditPublicSiteTask
 from src.tasks.build_android_apk import BuildWeatherApkTask
+from src.tasks.remote_status import RemoteStatusTask
+from src.tasks.load_test import LoadTestTask
 from src.utils.config import load_config
 
 logger = logging.getLogger(__name__)
@@ -26,8 +28,9 @@ async def handle_start(update: Update, context: ContextTypes.DEFAULT_TYPE, job_m
 Men sizning serveringizda turli vazifalarni bajarishga yordam beraman.
 
 **Mavjud buyruqlar:**
-• `/status` - Server holati
-• `/audit_site` - Saytni xavfsizlik tekshiruvi
+• `/status [host]` - Server holati (local yoki remote)
+• `/audit_site [-d] [domain]` - Saytni xavfsizlik tekshiruvi
+• `/ddos <url> -<count>` - Load test (faqat ruxsat berilgan serverlar)
 • `/build_weather_apk` - Weather app APK yaratish
 • `/jobs` - Oxirgi 10 ta job ro'yxati
 • `/job <id>` - Job holatini ko'rish
@@ -49,16 +52,28 @@ async def handle_help(update: Update, context: ContextTypes.DEFAULT_TYPE, job_ma
 
 **Buyruqlar:**
 
-`/status`
+`/status [host]`
 Server holatini ko'rsatadi (Nginx, PHP-FPM, MariaDB, disk, RAM)
+Agar host ko'rsatilsa, remote server holatini tekshiradi.
+Misol: `/status example.com`
 
-`/audit_site`
-jaysonkhan.com saytini xavfsizlik tekshiruvi:
+`/audit_site [-d] [domain]`
+Saytni xavfsizlik tekshiruvi:
 • `.env` fayllarini tekshirish
 • `.git` katalogini tekshirish
 • TLS sozlamalari
 • HTTP headers
 • Markdown hisobot yuboradi
+• `-d` flag: ochiq ma'lumotlarni Telegram'ga yuboradi
+• Domain ko'rsatilsa, o'sha saytni tekshiradi
+Misol: `/audit_site -d example.com`
+
+`/ddos <url> -<count>`
+Load test (faqat ruxsat berilgan serverlar):
+• Maksimal 10000 so'rov
+• Faqat o'z serverlaringizni test qilish mumkin
+• Performance metrikalari
+Misol: `/ddos example.com -1000`
 
 `/build_weather_apk`
 Weather app APK yaratadi:
@@ -86,14 +101,26 @@ Jobni bekor qilish (ishlayotgan joblar uchun)
 
 async def handle_status(update: Update, context: ContextTypes.DEFAULT_TYPE, job_manager: JobManager):
     """Handle /status command"""
-    await update.message.reply_text("⏳ Server holatini tekshiryapman...")
+    # Check if remote host is specified
+    target_host = None
+    if context.args and len(context.args) > 0:
+        target_host = context.args[0]
+        await update.message.reply_text(f"⏳ {target_host} server holatini tekshiryapman...")
+    else:
+        await update.message.reply_text("⏳ Server holatini tekshiryapman...")
     
     try:
         config = load_config()
         executor = JobExecutor(job_manager, config)
-        task = SystemStatusTask(config)
         
-        job_id = job_manager.create_job("status")
+        if target_host:
+            # Remote status check
+            task = RemoteStatusTask(config, target_host)
+            job_id = job_manager.create_job(f"status {target_host}")
+        else:
+            # Local status check
+            task = SystemStatusTask(config)
+            job_id = job_manager.create_job("status")
         
         # Run task
         result = await executor.execute_job(job_id, task.execute)
@@ -103,10 +130,13 @@ async def handle_status(update: Update, context: ContextTypes.DEFAULT_TYPE, job_
         if job and job.get('report_path'):
             report_path = Path(job['report_path'])
             if report_path.exists():
+                caption = f"📊 {'Remote' if target_host else 'Local'} server holati hisoboti"
+                if target_host:
+                    caption += f": {target_host}"
                 await update.message.reply_document(
                     document=open(report_path, 'rb'),
                     filename="status_report.md",
-                    caption="📊 Server holati hisoboti"
+                    caption=caption
                 )
             else:
                 await update.message.reply_text("✅ Tekshiruv yakunlandi. Hisobot yaratilmadi.")
@@ -123,14 +153,29 @@ async def handle_status(update: Update, context: ContextTypes.DEFAULT_TYPE, job_
 
 async def handle_audit_site(update: Update, context: ContextTypes.DEFAULT_TYPE, job_manager: JobManager):
     """Handle /audit_site command"""
-    await update.message.reply_text("🔍 Saytni tekshiryapman...")
+    # Parse arguments
+    target_domain = None
+    send_details = False
+    
+    if context.args:
+        for arg in context.args:
+            if arg == '-d':
+                send_details = True
+            elif not arg.startswith('-'):
+                target_domain = arg
+    
+    if target_domain:
+        await update.message.reply_text(f"🔍 {target_domain} saytini tekshiryapman...")
+    else:
+        await update.message.reply_text("🔍 Saytni tekshiryapman...")
     
     try:
         config = load_config()
         executor = JobExecutor(job_manager, config)
-        task = AuditPublicSiteTask(config)
+        task = AuditPublicSiteTask(config, target_domain=target_domain)
+        task.send_details = send_details
         
-        job_id = job_manager.create_job("audit_site")
+        job_id = job_manager.create_job(f"audit_site {target_domain or 'default'}")
         
         # Run task
         result = await executor.execute_job(job_id, task.execute)
@@ -145,6 +190,19 @@ async def handle_audit_site(update: Update, context: ContextTypes.DEFAULT_TYPE, 
                     filename="audit_report.md",
                     caption="🔒 Xavfsizlik tekshiruvi hisoboti"
                 )
+                
+                # Send detailed findings if -d flag was used
+                if send_details and result.get('details'):
+                    details = result['details']
+                    detail_messages = []
+                    
+                    if details.get('exposed_paths'):
+                        detail_messages.append("🔴 **Ochilgan fayllar:**\n")
+                        for finding in details['exposed_paths']:
+                            detail_messages.append(f"• {finding.get('title', 'Unknown')}")
+                    
+                    if detail_messages:
+                        await update.message.reply_text("\n".join(detail_messages), parse_mode='Markdown')
             else:
                 await update.message.reply_text("✅ Tekshiruv yakunlandi.")
         else:
@@ -292,4 +350,75 @@ async def handle_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE, job_
         await update.message.reply_text(f"✅ Job bekor qilindi: `{job_id}`", parse_mode='Markdown')
     else:
         await update.message.reply_text(f"❌ Job bekor qilinmadi (topilmadi yoki yakunlangan): `{job_id}`", parse_mode='Markdown')
+
+
+async def handle_ddos(update: Update, context: ContextTypes.DEFAULT_TYPE, job_manager: JobManager):
+    """Handle /ddos command - Load test (only allowed domains)"""
+    if not context.args or len(context.args) < 2:
+        await update.message.reply_text(
+            "❌ Noto'g'ri format. Format: `/ddos <url> -<count>`\n"
+            "Misol: `/ddos example.com -1000`",
+            parse_mode='Markdown'
+        )
+        return
+    
+    target_url = context.args[0]
+    request_count_str = context.args[1]
+    
+    # Parse request count
+    if request_count_str.startswith('-'):
+        try:
+            request_count = int(request_count_str[1:])
+        except ValueError:
+            await update.message.reply_text("❌ Noto'g'ri request count. Format: `-1000`")
+            return
+    else:
+        await update.message.reply_text("❌ Request count `-` bilan boshlanishi kerak. Format: `-1000`")
+        return
+    
+    # Validate request count
+    if request_count < 1 or request_count > 10000:
+        await update.message.reply_text("❌ Request count 1-10000 orasida bo'lishi kerak")
+        return
+    
+    await update.message.reply_text(
+        f"⚡ Load test boshlandi: {target_url}\n"
+        f"📊 So'rovlar soni: {request_count}\n"
+        f"⏳ Bu biroz vaqt olishi mumkin..."
+    )
+    
+    try:
+        config = load_config()
+        executor = JobExecutor(job_manager, config)
+        task = LoadTestTask(config, target_url, request_count)
+        
+        job_id = job_manager.create_job(f"ddos {target_url} -{request_count}")
+        
+        # Run task
+        result = await executor.execute_job(job_id, task.execute)
+        
+        # Send report
+        job = job_manager.get_job(job_id)
+        if job and job.get('report_path'):
+            report_path = Path(job['report_path'])
+            if report_path.exists():
+                await update.message.reply_document(
+                    document=open(report_path, 'rb'),
+                    filename="load_test_report.md",
+                    caption=f"⚡ Load test natijalari: {target_url}"
+                )
+            else:
+                await update.message.reply_text("✅ Load test yakunlandi.")
+        else:
+            await update.message.reply_text("❌ Xatolik yuz berdi.")
+        
+        # Cleanup
+        executor.cleanup_workspace(job_id)
+        
+    except ValueError as e:
+        logger.error(f"Load test security error: {e}")
+        await update.message.reply_text(f"🔒 Xavfsizlik: {str(e)}")
+    except Exception as e:
+        logger.error(f"Load test failed: {e}")
+        await update.message.reply_text(f"❌ Xatolik: {str(e)}")
 

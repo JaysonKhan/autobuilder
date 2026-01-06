@@ -13,11 +13,12 @@ from src.utils.config import load_config
 class AuditPublicSiteTask:
     """Audit publicly accessible endpoints"""
     
-    def __init__(self, config: dict):
+    def __init__(self, config: dict, target_domain: str = None):
         self.config = config
-        self.target_domain = config.get('audit', {}).get('target_domain', 'https://jaysonkhan.com')
+        self.target_domain = target_domain or config.get('audit', {}).get('target_domain', 'https://jaysonkhan.com')
         self.timeout = config.get('audit', {}).get('request_timeout', 10)
         self.user_agent = config.get('audit', {}).get('user_agent', 'AutoBuilder-Bot/1.0')
+        self.send_details = False  # For -d flag
     
     def execute(
         self,
@@ -82,11 +83,22 @@ class AuditPublicSiteTask:
         # Save report
         report.save(report_path)
         
+        # Collect detailed information if send_details is True
+        details = {}
+        if self.send_details:
+            details = {
+                'exposed_paths': [f for f in exposed_paths if f.get('severity') == 'critical'],
+                'tls_info': tls_info,
+                'headers': headers_info,
+                'assetlinks': assetlinks_info,
+            }
+        
         return {
             'status': overall_status,
             'findings_count': len(findings),
             'critical_count': critical_count,
             'warning_count': warning_count,
+            'details': details if self.send_details else None,
         }
     
     def _check_exposed_paths(self) -> List[Dict[str, Any]]:

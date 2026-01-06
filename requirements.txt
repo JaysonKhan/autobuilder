@@ -5,6 +5,7 @@ python-telegram-bot>=20.0
 
 # HTTP requests
 requests>=2.31.0
+aiohttp>=3.9.0
 
 # System information
 psutil>=5.9.0
