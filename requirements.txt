@@ -1,0 +1,18 @@
+# AutoBuilder Bot Python Dependencies
+
+# Telegram Bot
+python-telegram-bot>=20.0
+
+# HTTP requests
+requests>=2.31.0
+
+# System information
+psutil>=5.9.0
+
+# Configuration parsing
+tomli>=2.0.0
+
+# Optional: For MariaDB support (if not using SQLite)
+# mysql-connector-python>=8.0.0
+# PyMySQL>=1.0.0
+

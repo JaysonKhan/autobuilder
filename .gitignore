@@ -1,0 +1,62 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+
+# Configuration
+config/config.toml
+*.env
+*.env.local
+
+# Database
+storage/*.db
+storage/*.sqlite
+storage/*.sqlite3
+
+# Logs
+logs/
+*.log
+/var/log/autobuilder/*.log
+
+# Reports
+reports/*.md
+reports/*.pdf
+
+# Workspaces
+workspaces/
+workspace_*/
+
+# Build artifacts
+*.apk
+*.aab
+*.ipa
+build/
+dist/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Repository
+repo/
+.github/
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+

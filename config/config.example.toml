@@ -1,0 +1,83 @@
+# AutoBuilder Bot Configuration
+# Copy this file to /etc/autobuilder/config.toml and fill in your values
+# Set permissions: sudo chmod 600 /etc/autobuilder/config.toml
+
+[telegram]
+# Get token from @BotFather on Telegram
+bot_token = "YOUR_BOT_TOKEN_HERE"
+# Your Telegram chat ID (use @userinfobot to get it)
+chat_id = "YOUR_CHAT_ID_HERE"
+# Use webhook (true) or long polling (false)
+use_webhook = false
+# Webhook URL (if use_webhook = true)
+webhook_url = "https://jaysonkhan.com/autobuilder/webhook"
+# Webhook secret token
+webhook_secret = "CHANGE_THIS_SECRET"
+
+[github]
+# SSH key path for GitHub authentication
+ssh_key_path = "/root/.ssh/autobuilder_github"
+# Repository URL (SSH format)
+repo_url = "git@github.com:username/repo.git"
+# Repository local path (will be cloned here if not exists)
+repo_path = "/opt/autobuilder/repo"
+# Branch to push to (always 'myself')
+branch = "myself"
+# Git user name and email for commits
+git_user_name = "AutoBuilder Bot"
+git_user_email = "bot@jaysonkhan.com"
+
+[database]
+# Type: 'sqlite' or 'mariadb'
+type = "sqlite"
+# SQLite path (if type = sqlite)
+sqlite_path = "/opt/autobuilder/storage/jobs.db"
+# MariaDB connection (if type = mariadb)
+# Format: mysql://user:password@host:port/database
+connection_string = "mysql://autobuilder:CHANGE_PASSWORD@localhost:3306/autobuilder"
+
+[security]
+# Maximum execution time per job (seconds)
+max_job_timeout = 1800  # 30 minutes
+# Maximum disk usage per job (bytes)
+max_disk_per_job = 5368709120  # 5GB
+# Cleanup reports older than (days)
+report_retention_days = 7
+# Cleanup jobs older than (days)
+job_retention_days = 30
+# Redact sensitive patterns from logs
+redact_patterns = [
+    "DB_PASSWORD=",
+    "TOKEN=",
+    "Authorization:",
+    "password=",
+    "secret=",
+    "api_key=",
+]
+
+[paths]
+# Base directory for autobuilder
+base_dir = "/opt/autobuilder"
+# Reports directory
+reports_dir = "/opt/autobuilder/reports"
+# Workspaces directory
+workspaces_dir = "/opt/autobuilder/workspaces"
+# Logs directory
+logs_dir = "/var/log/autobuilder"
+
+[audit]
+# Target domain for audit
+target_domain = "https://jaysonkhan.com"
+# Timeout for HTTP requests (seconds)
+request_timeout = 10
+# User-Agent for requests
+user_agent = "AutoBuilder-Bot/1.0 (Security Audit)"
+
+[build]
+# Flutter SDK path (if not in PATH)
+flutter_path = "/usr/local/bin/flutter"
+# Android SDK path
+android_sdk_path = "/opt/android-sdk"
+# Java home
+java_home = "/usr/lib/jvm/java-17-openjdk-amd64"
+
