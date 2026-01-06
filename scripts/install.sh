@@ -21,9 +21,11 @@ INSTALL_DIR="/opt/autobuilder"
 echo "📁 Installation directory: $INSTALL_DIR"
 echo "📁 Project directory: $PROJECT_DIR"
 
-# Update package list
+# Update package list (ignore errors from mirror sync issues)
 echo "📦 Updating package list..."
-apt-get update -qq
+apt-get update -qq || {
+    echo "⚠️  Package list update had some errors (mirror sync issues), continuing anyway..."
+}
 
 # Install system dependencies
 echo "📦 Installing system dependencies..."
@@ -123,9 +125,52 @@ fi
 
 # Install systemd service
 echo "🔧 Installing systemd service..."
-cp "$PROJECT_DIR/systemd/autobuilder.service" /etc/systemd/system/
-systemctl daemon-reload
-echo "✅ Systemd service installed"
+if [ -f "$PROJECT_DIR/systemd/autobuilder.service" ]; then
+    cp "$PROJECT_DIR/systemd/autobuilder.service" /etc/systemd/system/
+    # Update ExecStart to use venv python
+    sed -i "s|ExecStart=/usr/bin/python3|ExecStart=$INSTALL_DIR/venv/bin/python3|" /etc/systemd/system/autobuilder.service
+    systemctl daemon-reload
+    echo "✅ Systemd service installed"
+else
+    echo "❌ Service file not found at $PROJECT_DIR/systemd/autobuilder.service"
+    echo "⚠️  Creating service file manually..."
+    cat > /etc/systemd/system/autobuilder.service << 'EOFSERVICE'
+[Unit]
+Description=AutoBuilder Bot - Telegram bot for automated tasks and builds
+After=network.target mariadb.service
+Wants=mariadb.service
+
+[Service]
+Type=simple
+User=autobuilder
+Group=autobuilder
+WorkingDirectory=/opt/autobuilder
+Environment="PATH=/usr/local/bin:/usr/bin:/bin"
+Environment="PYTHONUNBUFFERED=1"
+ExecStart=/opt/autobuilder/venv/bin/python3 /opt/autobuilder/src/main.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=autobuilder
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/autobuilder /var/log/autobuilder
+
+# Resource limits
+LimitNOFILE=65536
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target
+EOFSERVICE
+    systemctl daemon-reload
+    echo "✅ Systemd service created and installed"
+fi
 
 # Create log rotation
 echo "📝 Setting up log rotation..."

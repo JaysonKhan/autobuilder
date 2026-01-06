@@ -10,7 +10,7 @@ Group=autobuilder
 WorkingDirectory=/opt/autobuilder
 Environment="PATH=/usr/local/bin:/usr/bin:/bin"
 Environment="PYTHONUNBUFFERED=1"
-ExecStart=/usr/bin/python3 /opt/autobuilder/src/main.py
+ExecStart=/opt/autobuilder/venv/bin/python3 /opt/autobuilder/src/main.py
 Restart=always
 RestartSec=10
 StandardOutput=journal
